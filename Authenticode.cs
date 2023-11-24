@@ -13,6 +13,7 @@ namespace AuthentiSharp
         [DllImport("wintrust.dll", CharSet = CharSet.Unicode)]
         private static extern uint WinVerifyTrust([In] IntPtr hwnd, [In][MarshalAs(UnmanagedType.LPStruct)] Guid pgActionID, [In] WINTRUST_DATA pWVTData);
 
+        private const uint WTD_HASH_ONLY_FLAG = 0x200;
         private static readonly Guid WINTRUST_ACTION_GENERIC_VERIFY_V2 = new Guid("00aac56b-cd44-11d0-8cc2-00c04fc295ee");
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -38,12 +39,12 @@ namespace AuthentiSharp
             private readonly uint dwUIChoice = 2; // WTD_UI_NONE
             private readonly uint fdwRevocationChecks = 0; // WTD_REVOKE_NONE
             private readonly uint dwUnionChoice = 1; // WTD_CHOICE_FILE
-            public readonly IntPtr pFile;
-            private readonly uint dwStateAction = 0;
+            private readonly IntPtr pFile;
+            private readonly uint dwStateAction = 0; // WTD_STATEACTION_IGNORE
             private readonly IntPtr hWVTStateData = IntPtr.Zero;
             private readonly string pwszURLReference = null;
             private readonly uint dwProvFlags;
-            private readonly uint dwUIContext = 0;
+            private readonly uint dwUIContext = 0; // WTD_UICONTEXT_EXECUTE
             private readonly IntPtr pSignatureSettings = IntPtr.Zero;
 
             public WINTRUST_DATA(IntPtr pFile, uint dwProvFlags)
@@ -70,18 +71,17 @@ namespace AuthentiSharp
         public static bool Verify(string fileName)
         {
             var fileInfo = new WINTRUST_FILE_INFO(fileName);
-
-            var pFile = Marshal.AllocCoTaskMem(Marshal.SizeOf<WINTRUST_FILE_INFO>());
+            var pFile = Marshal.AllocHGlobal(Marshal.SizeOf<WINTRUST_FILE_INFO>());
             try
             {
-                var trustData = new WINTRUST_DATA(pFile, 0x200);
-                Marshal.StructureToPtr(fileInfo, trustData.pFile, false);
+                Marshal.StructureToPtr(fileInfo, pFile, false);
+                var trustData = new WINTRUST_DATA(pFile, WTD_HASH_ONLY_FLAG);
                 uint hResult = WinVerifyTrust(IntPtr.Zero, WINTRUST_ACTION_GENERIC_VERIFY_V2, trustData);
                 return hResult == 0x0;
             }
             finally
             {
-                Marshal.FreeCoTaskMem(pFile);
+                Marshal.FreeHGlobal(pFile);
             }
         }
     }

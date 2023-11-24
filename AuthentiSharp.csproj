@@ -2,8 +2,11 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+	  <RepositoryUrl>https://github.com/imerzan/AuthentiSharp</RepositoryUrl>
+	  <RepositoryType>git</RepositoryType>
 	  <PackageLicenseFile>LICENSE</PackageLicenseFile>
 	  <PackageReadmeFile>README.md</PackageReadmeFile>
+	  <Version>1.0.1</Version>
   </PropertyGroup>
 	<ItemGroup>
 		<None Include="LICENSE" Pack="true" PackagePath=""/>
