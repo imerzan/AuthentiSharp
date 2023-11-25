@@ -75,9 +75,16 @@ namespace AuthentiSharp
             try
             {
                 Marshal.StructureToPtr(fileInfo, pFile, false);
-                var trustData = new WINTRUST_DATA(pFile, WTD_HASH_ONLY_FLAG);
-                uint hResult = WinVerifyTrust(IntPtr.Zero, WINTRUST_ACTION_GENERIC_VERIFY_V2, trustData);
-                return hResult == 0x0;
+                try
+                {
+                    var trustData = new WINTRUST_DATA(pFile, WTD_HASH_ONLY_FLAG);
+                    uint hResult = WinVerifyTrust(IntPtr.Zero, WINTRUST_ACTION_GENERIC_VERIFY_V2, trustData);
+                    return hResult == 0x0;
+                }
+                finally
+                {
+                    Marshal.DestroyStructure<WINTRUST_FILE_INFO>(pFile);
+                }
             }
             finally
             {
