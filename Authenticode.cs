@@ -127,7 +127,7 @@ namespace AuthentiSharp
         /// </summary>
         /// <param name="file">File to check.</param>
         /// <param name="isCertValid">Certificate/Chain validation callback.</param>
-        /// <returns>True if both the certificate/chain is valid, and the Authenticode Signature is also valid. Otherwise False.</returns>
+        /// <returns>True if both the certificate/chain is valid, and the Authenticode Signature is valid. Otherwise False.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool VerifyFull(FileInfo file, Func<X509Certificate2, X509Chain, bool> isCertValid)
             => VerifyFull(file.FullName, isCertValid);
@@ -138,7 +138,7 @@ namespace AuthentiSharp
         /// </summary>
         /// <param name="filePath">Path to the file to check.</param>
         /// <param name="isCertValid">Certificate/Chain validation callback.</param>
-        /// <returns>True if both the certificate/chain is valid, and the Authenticode Signature is also valid. Otherwise False.</returns>
+        /// <returns>True if both the certificate/chain is valid, and the Authenticode Signature is valid. Otherwise False.</returns>
         public static bool VerifyFull(string filePath, Func<X509Certificate2, X509Chain, bool> isCertValid)
         {
             using (var cert = new X509Certificate2(filePath))
