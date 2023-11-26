@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 
 namespace AuthentiSharp
 {
@@ -24,9 +25,9 @@ namespace AuthentiSharp
             private readonly IntPtr hFile = new IntPtr(-1);
             private readonly IntPtr pgKnownSubject = IntPtr.Zero;
 
-            public WINTRUST_FILE_INFO(string fileName)
+            public WINTRUST_FILE_INFO(string filePath)
             {
-                this.pcwszFilePath = fileName;
+                this.pcwszFilePath = filePath;
             }
         }
 
@@ -56,6 +57,7 @@ namespace AuthentiSharp
 
         /// <summary>
         /// Verify a file's Authenticode Signature.
+        /// No additional checks are performed.
         /// </summary>
         /// <param name="file">File to check.</param>
         /// <returns>True if the authenticode signature is valid, otherwise False.</returns>
@@ -65,12 +67,13 @@ namespace AuthentiSharp
 
         /// <summary>
         /// Verify a file's Authenticode Signature.
+        /// No additional checks are performed.
         /// </summary>
-        /// <param name="fileName">Path to the file to check.</param>
+        /// <param name="filePath">Path to the file to check.</param>
         /// <returns>True if the authenticode signature is valid, otherwise False.</returns>
-        public static bool Verify(string fileName)
+        public static bool Verify(string filePath)
         {
-            var fileInfo = new WINTRUST_FILE_INFO(fileName);
+            var fileInfo = new WINTRUST_FILE_INFO(filePath);
             var pFile = Marshal.AllocHGlobal(Marshal.SizeOf<WINTRUST_FILE_INFO>());
             try
             {
@@ -90,6 +93,61 @@ namespace AuthentiSharp
             {
                 Marshal.FreeHGlobal(pFile);
             }
+        }
+
+        /// <summary>
+        /// Verifies a certificate's validity via basic validation, and then if valid also performs
+        /// Authenticode Signature verfication.
+        /// </summary>
+        /// <param name="file">File to check.</param>
+        /// <returns>True if the certificate passes basic validation, and the Authenticode Signature is also valid. Otherwise False.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool VerifyFull(FileInfo file)
+            => VerifyFull(file.FullName);
+
+        /// <summary>
+        /// Verifies a certificate's validity via basic validation, and then if valid also performs
+        /// Authenticode Signature verfication.
+        /// </summary>
+        /// <param name="filePath">Path to the file to check.</param>
+        /// <returns>True if the certificate passes basic validation, and the Authenticode Signature is also valid. Otherwise False.</returns>
+        public static bool VerifyFull(string filePath)
+        {
+            using (var cert = new X509Certificate2(filePath))
+            {
+                if (!cert.Verify())
+                    return false;
+            }
+            return Verify(filePath);
+        }
+
+        /// <summary>
+        /// Verifies a certificate's validity via user-defined callback, and then if valid also performs
+        /// Authenticode Signature verfication.
+        /// </summary>
+        /// <param name="file">File to check.</param>
+        /// <param name="isCertValid">Certificate/Chain validation callback.</param>
+        /// <returns>True if both the certificate/chain is valid, and the Authenticode Signature is also valid. Otherwise False.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool VerifyFull(FileInfo file, Func<X509Certificate2, X509Chain, bool> isCertValid)
+            => VerifyFull(file.FullName, isCertValid);
+
+        /// <summary>
+        /// Verifies a certificate's validity via user-defined callback, and then if valid also performs
+        /// Authenticode Signature verfication.
+        /// </summary>
+        /// <param name="filePath">Path to the file to check.</param>
+        /// <param name="isCertValid">Certificate/Chain validation callback.</param>
+        /// <returns>True if both the certificate/chain is valid, and the Authenticode Signature is also valid. Otherwise False.</returns>
+        public static bool VerifyFull(string filePath, Func<X509Certificate2, X509Chain, bool> isCertValid)
+        {
+            using (var cert = new X509Certificate2(filePath))
+            using (var chain = new X509Chain())
+            {
+                if (!isCertValid(cert, chain))
+                    return false;
+            }
+            return Verify(filePath);
         }
     }
 }
