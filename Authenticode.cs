@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace AuthentiSharp
@@ -113,7 +115,7 @@ namespace AuthentiSharp
         /// <returns>True if the certificate passes basic validation, and the Authenticode Signature is also valid. Otherwise False.</returns>
         public static bool VerifyFull(string filePath)
         {
-            using (var cert = new X509Certificate2(filePath))
+            using (var cert = LoadAuthenticode(filePath))
             {
                 if (!cert.Verify())
                     return false;
@@ -141,13 +143,32 @@ namespace AuthentiSharp
         /// <returns>True if both the certificate/chain is valid, and the Authenticode Signature is valid. Otherwise False.</returns>
         public static bool VerifyFull(string filePath, Func<X509Certificate2, X509Chain, bool> isCertValid)
         {
-            using (var cert = new X509Certificate2(filePath))
+            using (var cert = LoadAuthenticode(filePath))
             using (var chain = new X509Chain())
             {
                 if (!isCertValid(cert, chain))
                     return false;
             }
             return Verify(filePath);
+        }
+
+        /// <summary>
+        /// Load an X509Certificate2 from an Authenticode Signed File.
+        /// https://github.com/dotnet/runtime/discussions/108740
+        /// </summary>
+        /// <param name="path">Path to the file to load the cert info from.</param>
+        /// <returns>X509Certificate2</returns>
+        /// <exception cref="CryptographicException"></exception>
+        private static X509Certificate2 LoadAuthenticode(string path)
+        {
+            if (X509Certificate2.GetCertContentType(path) == X509ContentType.Authenticode)
+            {
+#pragma warning disable SYSLIB0057
+                return new X509Certificate2(path);
+#pragma warning restore SYSLIB0057
+            }
+
+            throw new CryptographicException("Invalid Authenticode Certificate!");
         }
     }
 }
